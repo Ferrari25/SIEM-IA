@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SIEM-IA · Panel de supervisión</title>
+  <style>
+    :root {
+      --bg: #0d1117; --panel: #161b22; --panel2: #0b0f14; --border: #30363d; --text: #c9d1d9;
+      --muted: #8b949e; --accent: #58a6ff;
+      --crit: #f85149; --high: #db6d28; --med: #d29922; --low: #3fb950;
+      --ok: #238636; --no: #6e2222;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text);
+           font-family: -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; }
+    header { padding: 18px 28px; border-bottom: 1px solid var(--border);
+             display: flex; align-items: center; justify-content: space-between; position: sticky; top:0; background:var(--bg); z-index:5;}
+    header h1 { font-size: 18px; margin: 0; font-weight: 600; }
+    header .meta { color: var(--muted); font-size: 13px; }
+    .wrap { padding: 24px 28px; max-width: 1100px; margin: 0 auto; }
+    .summary { display: flex; gap: 14px; margin-bottom: 22px; flex-wrap: wrap; align-items:center;}
+    .stat { background: var(--panel); border: 1px solid var(--border); border-radius: 8px;
+            padding: 12px 18px; min-width: 110px; }
+    .stat .n { font-size: 22px; font-weight: 700; }
+    .stat .l { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+    .toolbar { margin-left:auto; display:flex; gap:8px; align-items:center; font-size:13px; color:var(--muted);}
+    .card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+            margin-bottom: 20px; overflow: hidden; }
+    .card-head { padding: 16px 20px; border-bottom: 1px solid var(--border);
+                 display: flex; align-items: center; gap: 12px; flex-wrap: wrap; cursor:pointer; }
+    .card-head:hover { background:#1b2330; }
+    .chev { color:var(--muted); font-size:12px; width:12px; }
+    .badge { font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 20px;
+             text-transform: uppercase; letter-spacing: .03em; color: #fff; }
+    .b-CRITICAL { background: var(--crit); } .b-HIGH { background: var(--high); }
+    .b-MEDIUM { background: var(--med); color:#1c1300; } .b-LOW { background: var(--low); color:#04130a; }
+    .card-head .title { font-weight: 600; font-size: 15px; }
+    .card-head .id { color: var(--muted); font-size: 12px; font-family: ui-monospace, monospace; }
+    .card-head .src { margin-left: auto; font-size: 13px; color: var(--muted);
+                      font-family: ui-monospace, monospace; }
+    .card-body { padding: 18px 20px; }
+    .grid { display: grid; grid-template-columns: 120px 1fr; gap: 6px 14px; font-size: 14px; margin-bottom: 14px; }
+    .grid .k { color: var(--muted); }
+    .analysis p { margin: 6px 0; line-height: 1.5; font-size: 14px; }
+    .analysis .lbl { color: var(--accent); font-weight: 600; }
+    .src-tag { font-size: 11px; padding: 2px 7px; border-radius: 4px; border: 1px solid var(--border); color: var(--muted); }
+
+    /* Evidencia */
+    .evidence { margin-top:14px; border:1px solid var(--border); border-radius:8px; background:var(--panel2); }
+    .ev-head { padding:10px 14px; cursor:pointer; display:flex; align-items:center; gap:8px;
+               font-size:13px; font-weight:600; color:var(--text); }
+    .ev-head:hover { background:#11161d; }
+    .ev-body { padding:0 14px 14px; }
+    .ev-why { font-size:13px; color:var(--text); background:#13242f; border-left:3px solid var(--accent);
+              padding:8px 10px; border-radius:4px; margin:6px 0 12px; }
+    .ev-section-title { font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); margin:10px 0 6px; }
+    .timeline { list-style:none; margin:0; padding:0; }
+    .timeline li { display:flex; gap:10px; padding:4px 0; font-family:ui-monospace,monospace; font-size:12.5px; }
+    .timeline .t { color:var(--accent); white-space:nowrap; }
+    .timeline .d { color:var(--text); word-break:break-all; }
+    .chips { display:flex; flex-wrap:wrap; gap:6px; }
+    .chip { font-family:ui-monospace,monospace; font-size:12px; background:#0d1117; border:1px solid var(--border);
+            border-radius:4px; padding:2px 7px; color:#7ee787; }
+
+    .actions { margin-top: 16px; }
+    .actions h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 0 0 10px; }
+    .action { border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; margin-bottom: 10px; }
+    .action .top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .action .desc { font-size: 14px; }
+    .action .who { font-size: 11px; color: var(--muted); border: 1px solid var(--border); padding: 1px 7px; border-radius: 4px; }
+    .action .cmd { margin: 10px 0 0; background: var(--panel2); border: 1px solid var(--border);
+                   border-radius: 6px; padding: 8px 10px; font-family: ui-monospace, monospace;
+                   font-size: 12.5px; color: #7ee787; overflow-x: auto; }
+    .action .ctrl { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+    button { font: inherit; font-size: 13px; border: 1px solid var(--border); background: #21262d;
+             color: var(--text); border-radius: 6px; padding: 6px 14px; cursor: pointer; }
+    button:hover { border-color: var(--accent); }
+    button.approve.on { background: var(--ok); border-color: var(--ok); color: #fff; }
+    button.dismiss.on { background: var(--no); border-color: var(--no); color: #fff; }
+    .state { font-size: 12px; padding: 2px 9px; border-radius: 20px; font-weight: 600; }
+    .s-pending { background: #21262d; color: var(--muted); }
+    .s-approved { background: var(--ok); color: #fff; }
+    .s-dismissed { background: var(--no); color: #fff; }
+    .decided { font-size: 11px; color: var(--muted); margin-top: 6px; }
+    .hidden { display:none; }
+    .empty { text-align: center; color: var(--muted); padding: 60px; }
+    a { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🛡️ SIEM-IA · Panel de supervisión</h1>
+    <div class="meta" id="meta">cargando…</div>
+  </header>
+  <div class="wrap">
+    <div class="summary" id="summary"></div>
+    <div id="incidents"></div>
+  </div>
+
+  <script>
+    const sevClass = s => "b-" + (s || "MEDIUM").toUpperCase();
+    const esc = s => (s ?? "").toString().replace(/[&<>"]/g, c =>
+      ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c]));
+    const hhmmss = ts => { const m = /T(\d{2}:\d{2}:\d{2})/.exec(ts || ""); return m ? m[1] : esc(ts); };
+    // estado de colapso por incidente, para no perderlo en el auto-refresh
+    const collapsed = {};
+
+    async function load() {
+      const r = await fetch("/api/incidents");
+      render(await r.json());
+    }
+
+    function render(data) {
+      const incs = data.incidents || [];
+      const mode = data.analyst_mode || "—";
+      const now = new Date().toLocaleTimeString();
+      document.getElementById("meta").textContent =
+        `${incs.length} incidente(s) · análisis: ${mode} · actualizado ${now}`;
+
+      const totalActions = incs.reduce((a, i) => a + (i.recommended_actions || []).length, 0);
+      const pending = incs.reduce((a, i) =>
+        a + (i.recommended_actions || []).filter(x => x.status === "pending").length, 0);
+      document.getElementById("summary").innerHTML = `
+        <div class="stat"><div class="n">${incs.length}</div><div class="l">Incidentes</div></div>
+        <div class="stat"><div class="n">${totalActions}</div><div class="l">Acciones</div></div>
+        <div class="stat"><div class="n">${pending}</div><div class="l">Pendientes</div></div>
+        <div class="toolbar">↻ auto cada 15s</div>`;
+
+      const box = document.getElementById("incidents");
+      if (!incs.length) {
+        box.innerHTML = `<div class="empty">No hay incidentes. Corré
+          <code>python3 siem_pipeline.py</code> para generarlos.</div>`;
+        return;
+      }
+      box.innerHTML = incs.map(renderCard).join("");
+    }
+
+    function renderCard(inc) {
+      const an = inc.analysis || {};
+      const sev = (an.severidad_ajustada || inc.severity_siem || "MEDIUM").toUpperCase();
+      const actions = (inc.recommended_actions || []).map(a => renderAction(inc, a)).join("");
+      const refs = (an.referencias || []).map(esc).join(", ");
+      const isCol = collapsed[inc.incident_id];
+      return `
+        <div class="card">
+          <div class="card-head" onclick="toggleCard('${esc(inc.incident_id)}')">
+            <span class="chev">${isCol ? "▸" : "▾"}</span>
+            <span class="badge ${sevClass(sev)}">${esc(sev)}</span>
+            <span class="title">${esc(inc.classification?.attack_type || "incidente")}</span>
+            <span class="id">${esc(inc.incident_id)}</span>
+            <span class="src">origen ${esc(inc.source_ip)} · atacante ${esc((inc.attacker_ips||[]).join(", ") || "?")}</span>
+          </div>
+          <div class="card-body ${isCol ? "hidden" : ""}">
+            <div class="grid">
+              <span class="k">Regla SIEM</span><span>${esc(inc.rule_name || "—")}</span>
+              <span class="k">Eventos</span><span>${(inc.event_count||0).toLocaleString()}</span>
+              <span class="k">MITRE</span><span>${esc(inc.mitre?.technique_id || "—")} ${esc(inc.mitre?.technique || "")}</span>
+              <span class="k">Falso pos.</span><span>${esc(an.falso_positivo_probabilidad || "—")}</span>
+              <span class="k">Ventana</span><span>${esc(inc.first_seen)} → ${esc(inc.last_seen)}</span>
+            </div>
+            <div class="analysis">
+              <p><span class="lbl">Qué pasó:</span> ${esc(an.explicacion)}
+                 <span class="src-tag">${esc(an._source || "—")}</span></p>
+              <p><span class="lbl">Metodología:</span> ${esc(an.metodologia)}</p>
+              <p><span class="lbl">Riesgo en este entorno:</span> ${esc(an.contexto_riesgo)}</p>
+              ${refs ? `<p><span class="lbl">Referencias:</span> ${refs}</p>` : ""}
+            </div>
+            ${renderEvidence(inc)}
+            <div class="actions">
+              <h3>Acciones sugeridas — el analista decide</h3>
+              ${actions}
+            </div>
+          </div>
+        </div>`;
+    }
+
+    function renderEvidence(inc) {
+      const ev = inc.evidence || [];
+      const ports = inc.scanned_ports || [];
+      const urls = inc.phishing_urls || [];
+      const users = inc.target_users || [];
+      const samples = inc.sample_messages || [];
+      const evId = "ev-" + inc.incident_id;
+
+      const timeline = ev.length
+        ? `<div class="ev-section-title">Cronología (${ev.length} eventos observados)</div>
+           <ul class="timeline">${ev.map(e =>
+             `<li><span class="t">${hhmmss(e.ts)}</span><span class="d">${esc(e.detail)}</span></li>`).join("")}</ul>`
+        : (samples.length
+            ? `<div class="ev-section-title">Muestras de log</div>
+               <ul class="timeline">${samples.map(s => `<li><span class="d">${esc(s)}</span></li>`).join("")}</ul>`
+            : "");
+
+      const portsBlock = ports.length
+        ? `<div class="ev-section-title">Puertos sondeados (${ports.length})</div>
+           <div class="chips">${ports.map(p => `<span class="chip">${esc(p)}</span>`).join("")}</div>` : "";
+      const urlsBlock = urls.length
+        ? `<div class="ev-section-title">URLs de phishing</div>
+           <div class="chips">${urls.map(u => `<span class="chip">${esc(u)}</span>`).join("")}</div>` : "";
+      const usersBlock = users.length
+        ? `<div class="ev-section-title">Usuarios objetivo</div>
+           <div class="chips">${users.map(u => `<span class="chip">${esc(u)}</span>`).join("")}</div>` : "";
+
+      return `
+        <div class="evidence">
+          <div class="ev-head" onclick="toggleEv('${evId}', event)">
+            <span class="chev" id="${evId}-chev">▾</span> 🔍 Evidencia / por qué se sugieren estas acciones
+          </div>
+          <div class="ev-body" id="${evId}">
+            <div class="ev-why"><b>Motivo de la detección:</b> ${esc(inc.classification?.rationale || "—")}</div>
+            ${timeline}${portsBlock}${urlsBlock}${usersBlock}
+          </div>
+        </div>`;
+    }
+
+    function renderAction(inc, a) {
+      const cmd = a.comando_sugerido ? `<div class="cmd">$ ${esc(a.comando_sugerido)}</div>` : "";
+      const decided = a.decided_at
+        ? `<div class="decided">por ${esc(a.decided_by)} · ${esc(a.decided_at)}${a.note ? " · nota: " + esc(a.note) : ""}</div>` : "";
+      return `
+        <div class="action">
+          <div class="top">
+            <span class="state s-${esc(a.status)}">${esc(a.status)}</span>
+            <span class="who">${esc(a.responsable)} · ${esc(a.plazo)}</span>
+            <span class="desc">${esc(a.orden)}. ${esc(a.accion)}</span>
+            <span class="ctrl">
+              <button class="approve ${a.status==='approved'?'on':''}"
+                onclick="decide('${esc(inc.incident_id)}','${esc(a.action_id)}','approved')">Aprobar</button>
+              <button class="dismiss ${a.status==='dismissed'?'on':''}"
+                onclick="decide('${esc(inc.incident_id)}','${esc(a.action_id)}','dismissed')">Descartar</button>
+            </span>
+          </div>
+          ${cmd}${decided}
+        </div>`;
+    }
+
+    function toggleCard(id) { collapsed[id] = !collapsed[id]; load(); }
+    function toggleEv(evId, e) {
+      e.stopPropagation();
+      const body = document.getElementById(evId);
+      const chev = document.getElementById(evId + "-chev");
+      const hide = body.style.display !== "none";
+      body.style.display = hide ? "none" : "";
+      chev.textContent = hide ? "▸" : "▾";
+    }
+
+    async function decide(incident_id, action_id, decision) {
+      let note = "";
+      if (decision === "dismissed") note = prompt("Motivo (opcional) para descartar:") || "";
+      await fetch("/api/decision", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ incident_id, action_id, decision, note })
+      });
+      load();
+    }
+
+    load();
+    setInterval(load, 15000);
+  </script>
+</body>
+</html>

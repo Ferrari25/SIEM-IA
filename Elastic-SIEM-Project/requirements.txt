@@ -1,0 +1,5 @@
+# SIEM-IA — dependencias de los scripts y el dashboard
+requests>=2.31
+python-dotenv>=1.0
+google-genai>=2.0      # Agente 2 (LLM analista). Opcional: hay fallback determinístico.
+Flask>=3.0            # Dashboard de supervisión humana

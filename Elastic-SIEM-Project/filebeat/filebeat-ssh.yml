@@ -1,0 +1,21 @@
+# DEPRECATED — not used. This file is NOT mounted by docker-compose.yml, and the
+# glob below never matches: Docker names container log dirs by container ID, not by
+# container name, so `*ssh-target*.log` resolves to nothing. SSH container logs are
+# already captured by filebeat.yml's `docker-containers` input. Kept for reference only.
+filebeat.inputs:
+- type: container
+  enabled: true
+  paths:
+    - /var/lib/docker/containers/*ssh-target*.log
+  tags: ["ssh"]
+  processors:
+    - add_docker_metadata:
+        host: "unix:///var/run/docker.sock"
+    - add_tags:
+        tags: ["authentication_logs"]
+
+output.logstash:
+  hosts: ["logstash:5044"]
+  ssl.enabled: false
+
+logging.level: debug
