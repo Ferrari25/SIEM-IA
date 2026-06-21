@@ -18,6 +18,14 @@ from __future__ import annotations
 import subprocess
 import sys
 
+# Windows: forzar UTF-8 en la salida para no romper al imprimir emojis (este
+# script es standalone y no importa siem_lib). No-op en Linux/Mac.
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
+
 STEPS = [
     ("Extracción de datos del SIEM (prepare-for-ia.py)", [sys.executable, "prepare-for-ia.py"], True),
     ("Agente 1 — Clasificación determinística (classifier.py)", [sys.executable, "classifier.py"], False),
