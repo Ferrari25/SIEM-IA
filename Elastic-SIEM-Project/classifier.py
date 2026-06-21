@@ -25,6 +25,7 @@ Salida: `siem_incidents.json` (analysis = null; lo completa el Agente 2).
 from __future__ import annotations
 
 import hashlib
+import os
 import re
 from typing import Any
 
@@ -365,7 +366,9 @@ def classify(siem_data: dict, network_events: list[dict] | None = None) -> list[
 
 def main() -> None:
     print("[Agente 1 - Clasificador] Aplicando reglas determinísticas...")
-    siem_data = load_json(SIEM_FILE)
+    # En modo offline (sin Elasticsearch) siem_clean.json puede no existir todavía:
+    # lo tratamos como vacío y trabajamos solo con network_logs/.
+    siem_data = load_json(SIEM_FILE) if os.path.exists(SIEM_FILE) else {}
     # Eventos de red/web: del propio siem_clean.json (vía ES) o de network_logs/ (offline).
     network_events = siem_data.get("network_events", []) + siem_data.get("web_events", [])
     network_events += read_network_logs("network_logs")
