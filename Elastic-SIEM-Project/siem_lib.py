@@ -13,6 +13,7 @@ from __future__ import annotations
 import ipaddress
 import json
 import os
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -22,6 +23,15 @@ from requests.auth import HTTPBasicAuth
 from dotenv import load_dotenv
 
 load_dotenv()
+
+# Windows: las consolas cp1252 lanzan UnicodeEncodeError al imprimir emojis.
+# Forzamos UTF-8 en la salida estandar una sola vez, para todos los scripts que
+# importan este modulo (Agente 1, Agente 2, dashboard). No-op en Linux/Mac.
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
 
 # ─── Configuración (desde .env) ──────────────────────────────────────────────
 
